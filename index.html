@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fruit Grammar Ninja</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+    body {
+      background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Segoe UI', sans-serif;
+      overflow: hidden;
+    }
+    .game-container {
+      position: relative;
+      width: 800px;
+      height: 600px;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 0 60px rgba(0,0,0,0.5);
+      cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M16 0 Q20 14 30 16 Q20 18 16 32 Q12 18 2 16 Q12 14 16 0Z' fill='%23ff4444' opacity='0.8'/%3E%3C/svg%3E") 16 16, crosshair;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(180deg, #87CEEB 0%, #87CEEB 60%, #90EE90 60%, #228B22 100%);
+    }
+    #ui {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+    }
+    #ui > div { pointer-events: auto; }
+    .score { font-size: 28px; font-weight: bold; color: #fff; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+    .lives { font-size: 24px; }
+    .combo { font-size: 18px; color: #FFD700; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.3s; }
+    .combo.show { opacity: 1; }
+    .instruction {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 48px;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 3px 3px 6px rgba(0,0,0,0.7);
+      pointer-events: none;
+      text-align: center;
+      transition: opacity 0.5s;
+      opacity: 0;
+    }
+    .instruction.show { opacity: 1; }
+    .instruction span.verb { color: #ff6b6b; }
+    .instruction span.noun { color: #4ecdc4; }
+    .start-screen, .game-over-screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.7);
+      transition: opacity 0.5s;
+      pointer-events: auto;
+    }
+    .start-screen h1, .game-over-screen h1 {
+      font-size: 48px;
+      color: #FFD700;
+      text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+      margin-bottom: 20px;
+    }
+    .start-screen p, .game-over-screen p {
+      font-size: 18px;
+      color: #fff;
+      margin-bottom: 30px;
+      text-align: center;
+      line-height: 1.6;
+    }
+    .btn {
+      padding: 16px 48px;
+      font-size: 24px;
+      font-weight: bold;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      background: linear-gradient(45deg, #ff6b6b, #ffa500);
+      color: #fff;
+      box-shadow: 0 6px 20px rgba(255,107,107,0.4);
+      transition: transform 0.2s;
+      pointer-events: auto;
+    }
+    .btn:hover { transform: scale(1.05); }
+    .btn:active { transform: scale(0.95); }
+    .game-over-screen .final-score { font-size: 72px; color: #FFD700; font-weight: bold; }
+    .game-over-screen .final-label { font-size: 20px; color: #ccc; margin-bottom: 5px; }
+    .hidden { opacity: 0; pointer-events: none; }
+  </style>
+</head>
+<body>
+<div class="game-container">
+  <canvas id="game" width="800" height="600"></canvas>
+  <div id="ui">
+    <div>
+      <div class="score">Score: <span id="scoreDisplay">0</span></div>
+      <div class="combo" id="comboDisplay">Combo x2</div>
+    </div>
+    <div class="lives" id="livesDisplay">❤️❤️❤️</div>
+  </div>
+  <div class="instruction" id="instruction">
+    Slice the <span class="verb">VERBS</span>!
+  </div>
+  <div class="start-screen" id="startScreen">
+    <h1>🍉 Fruit Grammar Ninja</h1>
+    <p>
+      Slice the correct fruits to score!<br>
+      <span style="color:#ff6b6b;font-weight:bold">VERBS</span> = action words (run, jump...)<br>
+      <span style="color:#4ecdc4;font-weight:bold">NOUNS</span> = naming words (apple, dog...)<br><br>
+      ❌ Wrong slice = lose a life!<br>
+      🔥 Combo = bonus points!
+    </p>
+    <button class="btn" id="startBtn">▶ Start Game</button>
+  </div>
+  <div class="game-over-screen hidden" id="gameOverScreen">
+    <h1>💥 Game Over!</h1>
+    <div class="final-label">Final Score</div>
+    <div class="final-score" id="finalScore">0</div>
+    <p id="verdict"></p>
+    <button class="btn" id="restartBtn">🔄 Play Again</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = 800, H = 600;
+
+const VERBS = ['run','jump','eat','sleep','write','read','speak','fly','swim','dance','sing','cook','draw','play','think','laugh','cry','climb','fight','hide','kick','push','pull','throw','catch','drink','wash','smile','shout','count'];
+const NOUNS = ['apple','book','cat','dog','table','chair','school','house','tree','water','sun','moon','star','fish','bird','hand','foot','door','ball','pen','bag','hat','shoe','cake','milk','pencil','flower','cloud','river','mountain'];
+
+let fruits = [];
+let score = 0;
+let lives = 3;
+let combo = 0;
+let round = 0;
+let gameRunning = false;
+let spawnTimer = 0;
+let sliceTarget = 'verb';
+let nextTargetChange = 0;
+let instructionEl = document.getElementById('instruction');
+let scoreDisplay = document.getElementById('scoreDisplay');
+let livesDisplay = document.getElementById('livesDisplay');
+let comboDisplay = document.getElementById('comboDisplay');
+let startScreen = document.getElementById('startScreen');
+let gameOverScreen = document.getElementById('gameOverScreen');
+let finalScore = document.getElementById('finalScore');
+let verdict = document.getElementById('verdict');
+
+const FRUIT_TYPES = [
+  { name: 'watermelon', color: '#2e8b57', inner: '#ff3b3b', emoji: '🍉', radius: 30 },
+  { name: 'orange', color: '#ff8c00', inner: '#ffa500', emoji: '🍊', radius: 22 },
+  { name: 'apple', color: '#dc143c', inner: '#fff', emoji: '🍎', radius: 22 },
+  { name: 'lemon', color: '#ffd700', inner: '#ffff00', emoji: '🍋', radius: 20 },
+  { name: 'grape', color: '#8b008b', inner: '#9370db', emoji: '🍇', radius: 24 },
+  { name: 'peach', color: '#ffb07c', inner: '#ffdab9', emoji: '🍑', radius: 22 },
+];
+
+class Particle {
+  constructor(x, y, color) {
+    this.x = x; this.y = y;
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 6 + 2;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed - 2;
+    this.life = 1;
+    this.decay = Math.random() * 0.03 + 0.02;
+    this.color = color;
+    this.size = Math.random() * 6 + 3;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.15;
+    this.life -= this.decay;
+  }
+  draw() {
+    ctx.globalAlpha = this.life;
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+class SlashEffect {
+  constructor(x, y) {
+    this.x = x; this.y = y;
+    this.life = 1;
+  }
+  update() { this.life -= 0.05; }
+  draw() {
+    ctx.globalAlpha = this.life;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 3;
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#fff';
+    const len = 40 + Math.random() * 30;
+    const angle = Math.random() * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(this.x - Math.cos(angle) * len / 2, this.y - Math.sin(angle) * len / 2);
+    ctx.lineTo(this.x + Math.cos(angle) * len / 2, this.y + Math.sin(angle) * len / 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+  }
+}
+
+let particles = [];
+let slashEffects = [];
+let splashTexts = [];
+
+class SplashText {
+  constructor(x, y, text, color) {
+    this.x = x; this.y = y;
+    this.text = text;
+    this.color = color;
+    this.life = 1;
+    this.vy = -2;
+  }
+  update() {
+    this.y += this.vy;
+    this.vy *= 0.95;
+    this.life -= 0.02;
+  }
+  draw() {
+    ctx.globalAlpha = this.life;
+    ctx.fillStyle = this.color;
+    ctx.font = 'bold 28px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = this.color;
+    ctx.fillText(this.text, this.x, this.y);
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+  }
+}
+
+class Fruit {
+  constructor() {
+    this.type = FRUIT_TYPES[Math.floor(Math.random() * FRUIT_TYPES.length)];
+    const isVerb = Math.random() < 0.5;
+    this.isVerb = isVerb;
+    this.word = isVerb ? VERBS[Math.floor(Math.random() * VERBS.length)] : NOUNS[Math.floor(Math.random() * NOUNS.length)];
+    this.radius = this.type.radius;
+    this.x = Math.random() * (W - 100) + 50;
+    this.y = H + this.radius + Math.random() * 40;
+    this.vy = -(Math.random() * 4 + 6);
+    this.vx = (Math.random() - 0.5) * 4;
+    this.rotation = 0;
+    this.rotationSpeed = (Math.random() - 0.5) * 0.1;
+    this.sliced = false;
+    this.opacity = 1;
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.25;
+    this.rotation += this.rotationSpeed;
+    if (this.sliced) this.opacity -= 0.05;
+  }
+
+  draw() {
+    if (this.opacity <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = this.opacity;
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rotation);
+
+    // Shadow
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = 'rgba(0,0,0,0.2)';
+
+    // Fruit body
+    const r = this.radius;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fillStyle = this.type.color;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Highlight
+    const grad = ctx.createRadialGradient(-r*0.3, -r*0.3, 0, 0, 0, r);
+    grad.addColorStop(0, 'rgba(255,255,255,0.3)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Stem
+    ctx.strokeStyle = '#5a3a1a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, -r);
+    ctx.quadraticCurveTo(5, -r-8, 0, -r-12);
+    ctx.stroke();
+
+    // Leaf
+    ctx.fillStyle = '#228b22';
+    ctx.beginPath();
+    ctx.ellipse(5, -r-4, 8, 4, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Word on fruit
+    ctx.rotate(-this.rotation);
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${this.radius > 25 ? 13 : 11}px "Segoe UI", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowBlur = 4;
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.fillText(this.word, 0, 0);
+    ctx.shadowBlur = 0;
+
+    // Part of speech label
+    ctx.font = '9px "Segoe UI", sans-serif';
+    ctx.fillStyle = this.isVerb ? '#ff6b6b' : '#4ecdc4';
+    ctx.textBaseline = 'top';
+    ctx.fillText(this.isVerb ? 'verb' : 'noun', 0, this.radius * 0.5);
+
+    ctx.restore();
+  }
+
+  isAt(x, y) {
+    const dx = this.x - x;
+    const dy = this.y - y;
+    return dx * dx + dy * dy < this.radius * this.radius;
+  }
+}
+
+function spawnFruit() {
+  const f = new Fruit();
+  // Avoid spawning directly on existing fruits
+  for (const existing of fruits) {
+    if (Math.abs(f.x - existing.x) < 60 && Math.abs(f.y - existing.y) < 60) {
+      f.x = Math.random() * (W - 100) + 50;
+      break;
+    }
+  }
+  fruits.push(f);
+}
+
+function sliceFruit(fruit) {
+  fruit.sliced = true;
+  const correct = (sliceTarget === 'verb' && fruit.isVerb) || (sliceTarget === 'noun' && !fruit.isVerb);
+  const scoreGain = correct ? (10 + combo * 5) : -10;
+  score += scoreGain;
+  if (score < 0) score = 0;
+
+  if (correct) {
+    combo++;
+    if (combo > 1) {
+      comboDisplay.textContent = `🔥 Combo x${combo}!`;
+      comboDisplay.classList.add('show');
+    }
+    // Explosion particles in fruit color
+    for (let i = 0; i < 20; i++) {
+      particles.push(new Particle(fruit.x, fruit.y, fruit.type.inner));
+    }
+    for (let i = 0; i < 5; i++) {
+      particles.push(new Particle(fruit.x, fruit.y, '#fff'));
+    }
+    // Slash effect
+    slashEffects.push(new SlashEffect(fruit.x, fruit.y));
+    // Splash text
+    const texts = ['Awesome!','Great!','Nice!','Perfect!','Splash!','Yum!','Delicious!'];
+    splashTexts.push(new SplashText(fruit.x, fruit.y - 40, texts[Math.floor(Math.random()*texts.length)], '#FFD700'));
+    splashTexts.push(new SplashText(fruit.x + 20, fruit.y, `+${scoreGain}`, '#00ff00'));
+  } else {
+    lives--;
+    combo = 0;
+    comboDisplay.classList.remove('show');
+    for (let i = 0; i < 8; i++) {
+      particles.push(new Particle(fruit.x, fruit.y, '#ff0000'));
+    }
+    splashTexts.push(new SplashText(fruit.x, fruit.y - 30, '💀 Wrong!', '#ff0000'));
+    updateLives();
+    if (lives <= 0) gameOver();
+  }
+  scoreDisplay.textContent = score;
+}
+
+function updateLives() {
+  livesDisplay.textContent = '❤️'.repeat(Math.max(0, lives));
+}
+
+function showInstruction() {
+  instructionEl.innerHTML = `Slice the <span class="${sliceTarget}">${sliceTarget.toUpperCase()}S</span>!`;
+  instructionEl.classList.add('show');
+  setTimeout(() => instructionEl.classList.remove('show'), 1500);
+}
+
+function gameOver() {
+  gameRunning = false;
+  gameOverScreen.classList.remove('hidden');
+  finalScore.textContent = score;
+  if (score >= 200) verdict.textContent = '🏆 Amazing! You\'re a Grammar Master!';
+  else if (score >= 100) verdict.textContent = '🌟 Great job! Keep practising!';
+  else verdict.textContent = '💪 Keep trying! You\'ll get better!';
+}
+
+function resetGame() {
+  fruits = [];
+  particles = [];
+  slashEffects = [];
+  splashTexts = [];
+  score = 0;
+  lives = 3;
+  combo = 0;
+  spawnTimer = 0;
+  round = 0;
+  sliceTarget = 'verb';
+  nextTargetChange = 600;
+  scoreDisplay.textContent = '0';
+  updateLives();
+  comboDisplay.classList.remove('show');
+  startScreen.classList.add('hidden');
+  gameOverScreen.classList.add('hidden');
+  gameRunning = true;
+  showInstruction();
+}
+
+function update() {
+  if (!gameRunning) return;
+
+  spawnTimer++;
+  // Gradually increase spawn rate
+  const spawnInterval = Math.max(30, 80 - Math.floor(score / 50) * 5);
+  if (spawnTimer >= spawnInterval) {
+    spawnTimer = 0;
+    if (fruits.filter(f => !f.sliced).length < 10) {
+      spawnFruit();
+      // Sometimes spawn 2-3 at once
+      if (Math.random() < 0.2 && fruits.filter(f => !f.sliced).length < 8) spawnFruit();
+      if (Math.random() < 0.1 && fruits.filter(f => !f.sliced).length < 6) spawnFruit();
+    }
+  }
+
+  // Change target every 10 seconds
+  nextTargetChange--;
+  if (nextTargetChange <= 0) {
+    sliceTarget = sliceTarget === 'verb' ? 'noun' : 'verb';
+    nextTargetChange = 600;
+    showInstruction();
+  }
+
+  // Update fruits
+  for (let i = fruits.length - 1; i >= 0; i--) {
+    fruits[i].update();
+    // Remove if off screen or fully faded
+    if (fruits[i].y > H + 80 || (fruits[i].sliced && fruits[i].opacity <= 0)) {
+      fruits.splice(i, 1);
+    }
+  }
+
+  // Update particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    particles[i].update();
+    if (particles[i].life <= 0) particles.splice(i, 1);
+  }
+
+  // Update slash effects
+  for (let i = slashEffects.length - 1; i >= 0; i--) {
+    slashEffects[i].update();
+    if (slashEffects[i].life <= 0) slashEffects.splice(i, 1);
+  }
+
+  // Update splash texts
+  for (let i = splashTexts.length - 1; i >= 0; i--) {
+    splashTexts[i].update();
+    if (splashTexts[i].life <= 0) splashTexts.splice(i, 1);
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Sky gradient
+  const sky = ctx.createLinearGradient(0, 0, 0, H * 0.6);
+  sky.addColorStop(0, '#4a90d9');
+  sky.addColorStop(1, '#87CEEB');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H * 0.6);
+
+  // Ground
+  const ground = ctx.createLinearGradient(0, H * 0.6, 0, H);
+  ground.addColorStop(0, '#90EE90');
+  ground.addColorStop(0.3, '#7dd17d');
+  ground.addColorStop(1, '#228B22');
+  ctx.fillStyle = ground;
+  ctx.fillRect(0, H * 0.6, W, H * 0.4);
+
+  // Clouds
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  for (let i = 0; i < 5; i++) {
+    const cx = (i * 200 + Date.now() * 0.01) % (W + 100) - 50;
+    const cy = 40 + i * 20 % 100;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 30, 0, Math.PI * 2);
+    ctx.arc(cx + 25, cy - 5, 25, 0, Math.PI * 2);
+    ctx.arc(cx + 50, cy, 30, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw fruits
+  for (const f of fruits) f.draw();
+
+  // Draw particles
+  for (const p of particles) p.draw();
+
+  // Draw slash effects
+  for (const s of slashEffects) s.draw();
+
+  // Draw splash texts
+  for (const s of splashTexts) s.draw();
+}
+
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+// Mouse / touch handling
+function handleSlice(e) {
+  if (!gameRunning) return;
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  const scaleY = H / rect.height;
+  const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+  const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+  if (clientX == null) return;
+  const mx = (clientX - rect.left) * scaleX;
+  const my = (clientY - rect.top) * scaleY;
+
+  // Check fruits from top (front) to bottom
+  let hit = false;
+  for (let i = fruits.length - 1; i >= 0; i--) {
+    if (!fruits[i].sliced && fruits[i].isAt(mx, my)) {
+      sliceFruit(fruits[i]);
+      hit = true;
+      break;
+    }
+  }
+
+  // Slash effect even on miss
+  if (!hit) {
+    slashEffects.push(new SlashEffect(mx, my));
+    for (let i = 0; i < 5; i++) {
+      particles.push(new Particle(mx, my, 'rgba(255,255,255,0.5)'));
+    }
+  }
+}
+
+canvas.addEventListener('mousedown', handleSlice);
+canvas.addEventListener('touchstart', handleSlice, { passive: false });
+
+document.getElementById('startBtn').addEventListener('click', resetGame);
+document.getElementById('restartBtn').addEventListener('click', resetGame);
+
+// Initial draw
+draw();
+gameLoop();
+</script>
+</body>
+</html>
