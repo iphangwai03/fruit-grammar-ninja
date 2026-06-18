@@ -165,12 +165,12 @@ let finalScore = document.getElementById('finalScore');
 let verdict = document.getElementById('verdict');
 
 const FRUIT_TYPES = [
-  { name: 'watermelon', color: '#2e8b57', inner: '#ff3b3b', emoji: '🍉', radius: 44 },
-  { name: 'orange', color: '#ff8c00', inner: '#ffa500', emoji: '🍊', radius: 34 },
-  { name: 'apple', color: '#dc143c', inner: '#fff', emoji: '🍎', radius: 34 },
-  { name: 'lemon', color: '#ffd700', inner: '#ffff00', emoji: '🍋', radius: 30 },
-  { name: 'grape', color: '#8b008b', inner: '#9370db', emoji: '🍇', radius: 36 },
-  { name: 'peach', color: '#ffb07c', inner: '#ffdab9', emoji: '🍑', radius: 34 },
+  { name: 'watermelon', color: '#2e8b57', inner: '#ff3b3b', emoji: '🍉', radius: 62 },
+  { name: 'orange', color: '#ff8c00', inner: '#ffa500', emoji: '🍊', radius: 48 },
+  { name: 'apple', color: '#dc143c', inner: '#fff', emoji: '🍎', radius: 48 },
+  { name: 'lemon', color: '#ffd700', inner: '#ffff00', emoji: '🍋', radius: 42 },
+  { name: 'grape', color: '#8b008b', inner: '#9370db', emoji: '🍇', radius: 50 },
+  { name: 'peach', color: '#ffb07c', inner: '#ffdab9', emoji: '🍑', radius: 48 },
 ];
 
 class Particle {
@@ -263,8 +263,8 @@ class Fruit {
     this.radius = this.type.radius;
     this.x = Math.random() * (W - 100) + 50;
     this.y = H + this.radius + Math.random() * 40;
-    this.vy = -(Math.random() * 3 + 4);
-    this.vx = (Math.random() - 0.5) * 4;
+    this.vy = -(Math.random() * 2 + 2.5);
+    this.vx = (Math.random() - 0.5) * 2;
     this.rotation = 0;
     this.rotationSpeed = (Math.random() - 0.5) * 0.1;
     this.sliced = false;
@@ -274,7 +274,7 @@ class Fruit {
   update() {
     this.x += this.vx;
     this.y += this.vy;
-    this.vy += 0.25;
+    this.vy += 0.12;
     this.rotation += this.rotationSpeed;
     if (this.sliced) this.opacity -= 0.05;
   }
@@ -324,7 +324,7 @@ class Fruit {
     // Word on fruit
     ctx.rotate(-this.rotation);
     ctx.fillStyle = '#fff';
-    ctx.font = `bold ${this.radius > 30 ? 17 : 14}px "Segoe UI", sans-serif`;
+    ctx.font = `bold ${this.radius > 40 ? 22 : 18}px "Segoe UI", sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.shadowBlur = 4;
