@@ -165,12 +165,12 @@ let finalScore = document.getElementById('finalScore');
 let verdict = document.getElementById('verdict');
 
 const FRUIT_TYPES = [
-  { name: 'watermelon', color: '#2e8b57', inner: '#ff3b3b', emoji: '🍉', radius: 30 },
-  { name: 'orange', color: '#ff8c00', inner: '#ffa500', emoji: '🍊', radius: 22 },
-  { name: 'apple', color: '#dc143c', inner: '#fff', emoji: '🍎', radius: 22 },
-  { name: 'lemon', color: '#ffd700', inner: '#ffff00', emoji: '🍋', radius: 20 },
-  { name: 'grape', color: '#8b008b', inner: '#9370db', emoji: '🍇', radius: 24 },
-  { name: 'peach', color: '#ffb07c', inner: '#ffdab9', emoji: '🍑', radius: 22 },
+  { name: 'watermelon', color: '#2e8b57', inner: '#ff3b3b', emoji: '🍉', radius: 44 },
+  { name: 'orange', color: '#ff8c00', inner: '#ffa500', emoji: '🍊', radius: 34 },
+  { name: 'apple', color: '#dc143c', inner: '#fff', emoji: '🍎', radius: 34 },
+  { name: 'lemon', color: '#ffd700', inner: '#ffff00', emoji: '🍋', radius: 30 },
+  { name: 'grape', color: '#8b008b', inner: '#9370db', emoji: '🍇', radius: 36 },
+  { name: 'peach', color: '#ffb07c', inner: '#ffdab9', emoji: '🍑', radius: 34 },
 ];
 
 class Particle {
@@ -263,7 +263,7 @@ class Fruit {
     this.radius = this.type.radius;
     this.x = Math.random() * (W - 100) + 50;
     this.y = H + this.radius + Math.random() * 40;
-    this.vy = -(Math.random() * 4 + 6);
+    this.vy = -(Math.random() * 3 + 4);
     this.vx = (Math.random() - 0.5) * 4;
     this.rotation = 0;
     this.rotationSpeed = (Math.random() - 0.5) * 0.1;
@@ -324,7 +324,7 @@ class Fruit {
     // Word on fruit
     ctx.rotate(-this.rotation);
     ctx.fillStyle = '#fff';
-    ctx.font = `bold ${this.radius > 25 ? 13 : 11}px "Segoe UI", sans-serif`;
+    ctx.font = `bold ${this.radius > 30 ? 17 : 14}px "Segoe UI", sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.shadowBlur = 4;
@@ -333,10 +333,10 @@ class Fruit {
     ctx.shadowBlur = 0;
 
     // Part of speech label
-    ctx.font = '9px "Segoe UI", sans-serif';
+    ctx.font = '12px "Segoe UI", sans-serif';
     ctx.fillStyle = this.isVerb ? '#ff6b6b' : '#4ecdc4';
     ctx.textBaseline = 'top';
-    ctx.fillText(this.isVerb ? 'verb' : 'noun', 0, this.radius * 0.5);
+    ctx.fillText(this.isVerb ? 'verb' : 'noun', 0, this.radius * 0.6);
 
     ctx.restore();
   }
