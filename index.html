@@ -165,12 +165,12 @@ let finalScore = document.getElementById('finalScore');
 let verdict = document.getElementById('verdict');
 
 const FRUIT_TYPES = [
-  { name: 'watermelon', color: '#2e8b57', inner: '#ff3b3b', emoji: '🍉', radius: 62 },
-  { name: 'orange', color: '#ff8c00', inner: '#ffa500', emoji: '🍊', radius: 48 },
-  { name: 'apple', color: '#dc143c', inner: '#fff', emoji: '🍎', radius: 48 },
-  { name: 'lemon', color: '#ffd700', inner: '#ffff00', emoji: '🍋', radius: 42 },
-  { name: 'grape', color: '#8b008b', inner: '#9370db', emoji: '🍇', radius: 50 },
-  { name: 'peach', color: '#ffb07c', inner: '#ffdab9', emoji: '🍑', radius: 48 },
+  { name: 'watermelon', color: '#2e8b57', inner: '#ff3b3b', emoji: '🍉', radius: 160 },
+  { name: 'orange', color: '#ff8c00', inner: '#ffa500', emoji: '🍊', radius: 125 },
+  { name: 'apple', color: '#dc143c', inner: '#fff', emoji: '🍎', radius: 125 },
+  { name: 'lemon', color: '#ffd700', inner: '#ffff00', emoji: '🍋', radius: 110 },
+  { name: 'grape', color: '#8b008b', inner: '#9370db', emoji: '🍇', radius: 130 },
+  { name: 'peach', color: '#ffb07c', inner: '#ffdab9', emoji: '🍑', radius: 125 },
 ];
 
 class Particle {
@@ -263,8 +263,8 @@ class Fruit {
     this.radius = this.type.radius;
     this.x = Math.random() * (W - 100) + 50;
     this.y = H + this.radius + Math.random() * 40;
-    this.vy = -(Math.random() * 2 + 2.5);
-    this.vx = (Math.random() - 0.5) * 2;
+    this.vy = -(Math.random() * 2 + 3);
+    this.vx = (Math.random() - 0.5) * 1;
     this.rotation = 0;
     this.rotationSpeed = (Math.random() - 0.5) * 0.1;
     this.sliced = false;
@@ -274,7 +274,7 @@ class Fruit {
   update() {
     this.x += this.vx;
     this.y += this.vy;
-    this.vy += 0.12;
+    this.vy += 0.024;
     this.rotation += this.rotationSpeed;
     if (this.sliced) this.opacity -= 0.05;
   }
@@ -324,7 +324,7 @@ class Fruit {
     // Word on fruit
     ctx.rotate(-this.rotation);
     ctx.fillStyle = '#fff';
-    ctx.font = `bold ${this.radius > 40 ? 22 : 18}px "Segoe UI", sans-serif`;
+    ctx.font = `bold ${Math.floor(this.radius / 5)}px "Segoe UI", sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.shadowBlur = 4;
@@ -333,7 +333,7 @@ class Fruit {
     ctx.shadowBlur = 0;
 
     // Part of speech label
-    ctx.font = '12px "Segoe UI", sans-serif';
+    ctx.font = '18px "Segoe UI", sans-serif';
     ctx.fillStyle = this.isVerb ? '#ff6b6b' : '#4ecdc4';
     ctx.textBaseline = 'top';
     ctx.fillText(this.isVerb ? 'verb' : 'noun', 0, this.radius * 0.6);
@@ -443,18 +443,14 @@ function resetGame() {
 function update() {
   if (!gameRunning) return;
 
-  spawnTimer++;
-  // Gradually increase spawn rate
-  const spawnInterval = Math.max(30, 80 - Math.floor(score / 50) * 5);
-  if (spawnTimer >= spawnInterval) {
-    spawnTimer = 0;
-    if (fruits.filter(f => !f.sliced).length < 10) {
-      spawnFruit();
-      // Sometimes spawn 2-3 at once
-      if (Math.random() < 0.2 && fruits.filter(f => !f.sliced).length < 8) spawnFruit();
-      if (Math.random() < 0.1 && fruits.filter(f => !f.sliced).length < 6) spawnFruit();
-    }
-  }
+    spawnTimer++;
+      const spawnInterval = Math.max(80, 160 - Math.floor(score / 50) * 5);
+      if (spawnTimer >= spawnInterval) {
+        spawnTimer = 0;
+        if (fruits.filter(f => !f.sliced).length < 5) {
+          spawnFruit();
+        }
+      }
 
   // Change target every 10 seconds
   nextTargetChange--;
